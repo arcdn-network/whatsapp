@@ -24,13 +24,26 @@ const DUPLICATE_WINDOW_MS = 4000;
 let clientInstance = null;
 let clientInitializing = null;
 
-function isPrivateUserChat(msg) {
-  const chatId = msg.from || '';
+function getMessageChatId(msg) {
+  if (!msg) return '';
+  return msg.fromMe ? msg.to || '' : msg.from || '';
+}
+
+function isSlashCommand(text) {
+  return /^\/\S+(?:\s+\S.*)?$|^\/$/.test(String(text || '').trim());
+}
+
+function shouldProcessMessage(msg) {
+  const chatId = getMessageChatId(msg);
   if (!chatId) return false;
-  if (msg.fromMe) return false;
   if (chatId.includes('@g.us')) return false;
   if (chatId.includes('@newsletter')) return false;
   if (chatId.includes('@broadcast')) return false;
+
+  if (msg.fromMe) {
+    return isSlashCommand(msg.body);
+  }
+
   return true;
 }
 
@@ -212,7 +225,7 @@ async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOp
 
 async function sendNormalizedResponse(client, originalMsg, response) {
   const messages = normalizeResponse(response);
-  const chatId = originalMsg.from;
+  const chatId = getMessageChatId(originalMsg);
   const quotedMessageId = originalMsg.id?._serialized;
 
   for (const msg of messages) {
@@ -258,12 +271,12 @@ async function sendNormalizedResponse(client, originalMsg, response) {
 async function onNewMessage(msg) {
   try {
     if (!clientInstance) return;
-    if (!isPrivateUserChat(msg)) return;
+    if (!shouldProcessMessage(msg)) return;
     if (!msg.body) return;
 
     cleanupDuplicateMessages();
 
-    const senderId = msg.from;
+    const senderId = getMessageChatId(msg);
     if (!senderId) return;
 
     const normalizedText = normalizeText(msg.body);
@@ -342,6 +355,7 @@ async function startWhatsAppBot() {
     });
 
     client.on('message', onNewMessage);
+    client.on('message_create', onNewMessage);
 
     await client.initialize();
 
