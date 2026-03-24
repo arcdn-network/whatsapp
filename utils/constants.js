@@ -35,7 +35,7 @@ const SERVICES = [
       '✅ *Activación inmediata*',
       '✅ *Actualizaciones automáticas*',
       '',
-      'Si deseas adquirirlo, escribe: `/pagar',
+      'Si deseas adquirirlo, escribe: `/pagar`',
     ],
   },
   {
@@ -89,7 +89,7 @@ const SERVICES = [
       '✅ *Número de celular*',
       '✅ *Placa vehicular*',
       '',
-      'Si deseas solicitar una consulta`',
+      'Si deseas solicitar una consulta',
       'escribe: `/pagar`',
     ],
   },
@@ -140,11 +140,11 @@ function QR_MESSAGE(precio = 40) {
     '',
     'Sigue estos pasos para pagar:',
     '',
-    '2️⃣ Abre tu *Yape* o banca móvil.',
-    '3️⃣ Selecciona *Escanear QR*.',
-    '4️⃣ Ve a la opción *Subir imagen*.',
-    `5️⃣ Realiza el pago de *S/ ${monto}*.`,
-    '6️⃣ Envía el *comprobante de pago* por este chat.',
+    '1️⃣ Abre tu *Yape* o banca móvil.',
+    '2️⃣ Selecciona *Escanear QR*.',
+    '3️⃣ Ve a la opción *Subir imagen*.',
+    `4️⃣ Realiza el pago de *S/ ${monto}*.`,
+    '5️⃣ Envía el *comprobante de pago* por este chat.',
     '',
     '⏳ Una vez verificado el pago, activaré la licencia con tu correo.',
   ].join('\n');
@@ -284,7 +284,8 @@ const COMMAND_RESPONSES = {
 };
 
 function getCommandResponse(normalizedText) {
-  const response = COMMAND_RESPONSES[normalizedText] ?? null;
+  const texto = String(normalizedText || '').trim();
+  const response = COMMAND_RESPONSES[texto] ?? null;
 
   if (typeof response === 'function') {
     return response();
@@ -307,7 +308,10 @@ function getRegisterCodeMessage(code) {
 }
 
 function getServiceResponseById(id) {
-  const service = SERVICES.find((item) => item.id === id);
+  const value = String(id || '').trim();
+  if (!/^[1-5]$/.test(value)) return null;
+
+  const service = SERVICES.find((item) => item.id === value);
   if (!service) return null;
 
   return {
@@ -394,7 +398,17 @@ function normalizeText(text) {
 }
 
 function getCommandKey(normalizedText) {
-  return String(normalizedText || '').split(' ')[0];
+  const text = String(normalizedText || '').trim();
+
+  if (COMMAND_RESPONSES[text]) {
+    return text;
+  }
+
+  if (/^[1-5]$/.test(text)) {
+    return text;
+  }
+
+  return null;
 }
 
 module.exports = {
