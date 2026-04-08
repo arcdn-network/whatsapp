@@ -3,6 +3,7 @@ const qrcode = require('qrcode-terminal');
 const path = require('path');
 const fs = require('fs');
 
+const { banUser, unbanUser, isBanned } = require('./services/banned');
 const { buscarPagoPorOperacion, buscarCodigoRegistroPorEmail } = require('./services/querys');
 const {
   QR_MESSAGE,
@@ -281,9 +282,27 @@ async function onNewMessage(msg) {
 
     const normalizedText = normalizeText(msg.body);
 
-    if (shouldBlockDuplicate(senderId, normalizedText)) {
-      return;
+    // ── Comandos admin ──
+    if (msg.fromMe) {
+      const myId = clientInstance.info?.wid?._serialized;
+
+      if (normalizedText === '/off') {
+        if (senderId === myId) return;
+        banUser(senderId);
+        return;
+      }
+      if (normalizedText === '/on') {
+        if (senderId === myId) return;
+        unbanUser(senderId);
+        return;
+      }
     }
+
+    // ── Bloquear baneados ──
+    if (isBanned(senderId)) return;
+
+    // ── Flujo normal ──
+    if (shouldBlockDuplicate(senderId, normalizedText)) return;
 
     const response = await getResponseConfig(msg.body, normalizedText);
     if (!response) return;
