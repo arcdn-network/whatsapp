@@ -323,7 +323,8 @@ function getServiceResponseById(id) {
 function SERVICE_MESSAGE(text, normalizedText) {
   const mensajeOriginal = String(text || '').trim();
 
-  if (!normalizedText.includes('quisiera solicitar los siguientes servicios')) {
+  const msg = normalizedText.toLowerCase().trim();
+  if (!msg.startsWith('hola lguss') || !msg.includes('quisiera solicitar')) {
     return null;
   }
 
