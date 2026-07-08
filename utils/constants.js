@@ -194,6 +194,15 @@ const COMMAND_RESPONSES = {
   'hola, ayuda con el yape fake!': {
     text: 'Hola, en que puedo ayudarte?',
   },
+  'hola, ayuda con el yape fake.': {
+    text: 'Hola, en que puedo ayudarte?',
+  },
+  'hola ayuda con la instalación del yape fake!': {
+    text: 'Hola, coméntame si eres Android o Iphone',
+  },
+  'hola ayuda con la instalación del yape fake.': {
+    text: 'Hola, coméntame si eres Android o Iphone',
+  },
   'hola informacion sobre el yape.': {
     image: 'yape.png',
     text: YAPE_APP_MESSAGE,
@@ -224,6 +233,22 @@ const COMMAND_RESPONSES = {
         'Luego crea tu cuenta ✍️ dentro de la app.',
         '',
         'Cuando termines, envíame el correo con el que te registraste para activar tu licencia ✅',
+      ].join('\n'),
+    },
+    {
+      file: 'files/Yape_Fake.apk',
+      text: null,
+    },
+  ],
+  '/app': [
+    {
+      text: [
+        '📦 Aquí tienes la aplicación.',
+        '',
+        'Instálala en tu dispositivo 📲 ',
+        '',
+        '✅ Si es tu primera vez, click *"Crear una cuenta"*.',
+        '✅ Si ya eres cliente, click *"Ya tengo una Cuenta Yape"* e ingresa con el mismo correo con el que se activó tu licencia.',
       ].join('\n'),
     },
     {

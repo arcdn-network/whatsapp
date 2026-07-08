@@ -209,19 +209,22 @@ function resolveResourcePath(filePath) {
 }
 
 async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOptions = {}) {
+  if (client !== clientInstance) return false;
+
   const filePath = resolveResourcePath(mediaPath);
 
   if (!fs.existsSync(filePath)) {
     return false;
   }
 
-  const media = MessageMedia.fromFilePath(filePath);
-  await client.sendMessage(chatId, media, {
-    ...options,
-    ...extraOptions,
-  });
-
-  return true;
+  try {
+    const media = MessageMedia.fromFilePath(filePath);
+    await client.sendMessage(chatId, media, { ...options, ...extraOptions });
+    return true;
+  } catch (error) {
+    console.error('[WHATSAPP] Error enviando media, probablemente sesión caída:', error.message);
+    return false;
+  }
 }
 
 async function sendNormalizedResponse(client, originalMsg, response) {
@@ -313,6 +316,11 @@ async function onNewMessage(msg) {
   }
 }
 
+// ── Constantes de reconexión ──
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 8000;
+let retryCount = 0;
+
 function createWhatsAppClient() {
   const sessionPath = '.wwebjs_auth';
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
@@ -323,12 +331,13 @@ function createWhatsAppClient() {
 
   return new Client({
     authStrategy: new LocalAuth({
+      clientId: 'main',
       dataPath: sessionPath,
     }),
     puppeteer: {
       headless: true,
       executablePath,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--no-zygote'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     },
     authTimeoutMs: 120000,
     qrMaxRetries: 10,
@@ -352,25 +361,48 @@ async function startWhatsAppBot() {
     });
 
     client.on('authenticated', () => {
+      retryCount = 0;
       console.log('[WHATSAPP] Sesión autenticada');
     });
 
     client.on('ready', () => {
+      retryCount = 0;
       const wid = client.info?.wid?._serialized || 'sin_wid';
       console.log(`[WHATSAPP] Conectado como: ${wid}`);
     });
 
-    client.on('auth_failure', (msg) => {
+    client.on('auth_failure', async (msg) => {
       console.error('[WHATSAPP] Falló la autenticación:', msg);
+
+      try {
+        await client.destroy();
+      } catch (_) {}
+
+      const sessionPath = path.join(process.cwd(), '.wwebjs_auth');
+      if (fs.existsSync(sessionPath)) {
+        fs.rmSync(sessionPath, { recursive: true, force: true });
+        console.warn('[WHATSAPP] Sesión eliminada, reiniciando...');
+      }
+
+      scheduleReconnect();
     });
 
-    client.on('disconnected', (reason) => {
+    client.on('disconnected', async (reason) => {
       console.warn('[WHATSAPP] Cliente desconectado:', reason);
       clientInstance = null;
       clientInitializing = null;
-      setTimeout(() => {
+
+      try {
+        await client.destroy();
+      } catch (_) {}
+
+      if (reason === 'CONFLICT' || reason === 'UNLAUNCHED') {
+        console.error('[WHATSAPP] Conflicto de sesión detectado, saliendo...');
         process.exit(1);
-      }, 3000);
+        return;
+      }
+
+      scheduleReconnect();
     });
 
     client.on('message', onNewMessage);
@@ -388,8 +420,29 @@ async function startWhatsAppBot() {
     return await clientInitializing;
   } catch (error) {
     clientInitializing = null;
+    scheduleReconnect();
     throw error;
   }
+}
+
+function scheduleReconnect() {
+  if (retryCount >= MAX_RETRIES) {
+    console.error(`[WHATSAPP] Máximo de reintentos (${MAX_RETRIES}) alcanzado. Saliendo.`);
+    process.exit(1);
+    return;
+  }
+
+  retryCount++;
+  const delay = RETRY_DELAY_MS * retryCount;
+  console.log(`[WHATSAPP] Reconectando en ${delay / 1000}s... (intento ${retryCount}/${MAX_RETRIES})`);
+
+  setTimeout(async () => {
+    try {
+      await startWhatsAppBot();
+    } catch (error) {
+      console.error('[WHATSAPP] Error al reconectar:', error.message);
+    }
+  }, delay);
 }
 
 module.exports = {
