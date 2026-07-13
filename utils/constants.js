@@ -7,7 +7,7 @@ const SERVICES = [
       '🚀 *YAPE FAKE - 2026*',
       '',
       'Activa tu licencia de forma segura aquí.',
-      '💰 *Precio:* S/ 40',
+      '💰 *Precio:* S/ 50',
       '',
       '✅ *Pago único*',
       '✅ *Acceso permanente*',
@@ -132,7 +132,7 @@ const INFO_MESSAGE = ['📋 *Servicios disponibles*', '', ...serviceRows, '', '�
 
 const YAPE_APP_MESSAGE = SERVICES[0].message.join('\n');
 
-function QR_MESSAGE(precio = 40) {
+function QR_MESSAGE(precio = 50) {
   const monto = Number(precio).toFixed(2);
 
   return [
@@ -191,17 +191,14 @@ const COMMAND_RESPONSES = {
   'buenos dias': {
     text: 'Hola, en que puedo ayudarte?',
   },
+  'hola ayuda con el yape fake!': {
+    text: 'Hola, en que puedo ayudarte?',
+  },
   'hola, ayuda con el yape fake!': {
     text: 'Hola, en que puedo ayudarte?',
   },
-  'hola, ayuda con el yape fake.': {
-    text: 'Hola, en que puedo ayudarte?',
-  },
-  'hola ayuda con la instalación del yape fake!': {
-    text: 'Hola, coméntame si eres Android o Iphone',
-  },
-  'hola ayuda con la instalación del yape fake.': {
-    text: 'Hola, coméntame si eres Android o Iphone',
+  'hola ayuda con la instalacion del yape fake!': {
+    text: 'Hola, eres Android o Iphone?',
   },
   'hola informacion sobre el yape.': {
     image: 'yape.png',
@@ -219,7 +216,7 @@ const COMMAND_RESPONSES = {
   },
   '/pagar': () => ({
     image: 'qr.png',
-    text: QR_MESSAGE(40),
+    text: QR_MESSAGE(50),
   }),
   '/qr': {
     image: 'qr.png',

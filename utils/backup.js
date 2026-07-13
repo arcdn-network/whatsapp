@@ -7,7 +7,7 @@ const SERVICES = [
       '🚀 *YAPE FAKE - 2026*',
       '',
       'Activa tu licencia de forma segura aquí.',
-      '💰 *Precio:* S/ 40',
+      '💰 *Precio:* S/ 50',
       '',
       '✅ *Pago único*',
       '✅ *Acceso permanente*',

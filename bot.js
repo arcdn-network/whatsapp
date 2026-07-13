@@ -113,7 +113,7 @@ async function getSpecialQueryResponse(text) {
 
     const pago = resp.data;
     const email = pago.email || null;
-    const precio = pago.amount ?? 40;
+    const precio = pago.amount ?? 50;
 
     const nombre = email ? String(email).split('@')[0] : '-';
     const monto = Number(precio).toFixed(2);
