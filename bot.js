@@ -10,6 +10,7 @@ const {
   SERVICE_MESSAGE,
   getCommandResponse,
   getRegisterCodeMessage,
+  getPaymentInfoMessage,
   getTokenMessage,
   normalizeText,
 } = require('./utils/constants');
@@ -27,6 +28,12 @@ let clientInitializing = null;
 function getMessageChatId(msg) {
   if (!msg) return '';
   return msg.fromMe ? msg.to || '' : msg.from || '';
+}
+
+function getQuotedMessageId(msg) {
+  const id = msg?.id;
+  if (!id) return undefined;
+  return id._serialized || id['$1'] || `${id.fromMe}_${id.remote}_${id.id}`;
 }
 
 function isSlashCommand(text) {
@@ -234,7 +241,7 @@ async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOp
 async function sendNormalizedResponse(client, originalMsg, response) {
   const messages = normalizeResponse(response);
   const chatId = getMessageChatId(originalMsg);
-  const quotedMessageId = originalMsg.id?._serialized;
+  const quotedMessageId = getQuotedMessageId(originalMsg);
 
   let chat = null;
   try {
