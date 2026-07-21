@@ -1,154 +1,6 @@
-const SERVICES = [
-  {
-    id: '1',
-    img: 'yape.png',
-    option: 'Yape Fake',
-    message: [
-      '🚀 *YAPE FAKE - 2026*',
-      '',
-      'Activa tu licencia de forma segura aquí.',
-      '💰 *Precio:* S/ 50',
-      '',
-      '✅ *Pago único*',
-      '✅ *Acceso permanente*',
-      '✅ *Actualizaciones automáticas*',
-      '',
-      'Si deseas adquirirlo, escribe: `/pagar`',
-    ],
-  },
-  {
-    id: '2',
-    img: 'banks.png',
-    option: 'Bancas Fake',
-    message: [
-      '🚀 *BANCAS FAKE*',
-      '',
-      'Activa el acceso a tus bancas.',
-      'No necesitas reinstalar la app: el acceso es directamente desde tu mismo Yape.',
-      '',
-      '💰 *Precios:*',
-      '• 1 App → S/ 15',
-      '• 2 Apps → S/ 25',
-      '• 3 Apps → S/ 30',
-      '',
-      '✅ *Pago único*',
-      '✅ *Activación inmediata*',
-      '✅ *Actualizaciones automáticas*',
-      '',
-      'Si deseas adquirirlo, escribe: `/pagar`',
-    ],
-  },
-  {
-    id: '3',
-    img: 'vip.png',
-    option: 'Contenido VIP',
-    message: [
-      '🔞 *GRUPO VIP CONTENIDO PREMIUM*',
-      '',
-      'Accede al grupo privado con contenido exclusivo.',
-      'Encontrarás material de influencers, tiktokers peruanas, castings y contenido casero.',
-      '',
-      '💰 *Precio:* S/ 50',
-      '',
-      '✅ Pago único',
-      '✅ Acceso permanente',
-      '✅ Fotos y videos exclusivos',
-      '✅ Contenido nuevo constantemente',
-      '✅ Descarga todo el material',
-      '',
-      'Si deseas adquirirlo ,escribe: `/pagar`',
-    ],
-  },
-  {
-    id: '4',
-    img: 'followers.png',
-    option: 'Seguidores',
-    message: [
-      '🚀 *SEGUIDORES PARA REDES SOCIALES*',
-      '',
-      '💯 Impulsa tu perfil y aumenta tu alcance.',
-      '',
-      '✅ *Entrega inmediata*',
-      '✅ *Tiempo de servicio:* 5 a 30 minutos',
-      '✅ *Sin límite de cantidad*, tú decides',
-      '',
-      'Si deseas solicitar un pedido',
-      'escribe: `/pagar`',
-    ],
-  },
-  {
-    id: '5',
-    img: 'doxing.png',
-    option: 'Doxeos',
-    message: [
-      '🔎 *SERVICIOS DE DOXEOS*',
-      '',
-      'Realiza búsquedas mediante:',
-      '',
-      '✅ *DNI o nombres completos*',
-      '✅ *Número de celular*',
-      '✅ *Placa vehicular*',
-      '',
-      'Si deseas solicitar una consulta',
-      'escribe: `/pagar`',
-    ],
-  },
-];
-
-const MAIN_MENU_MESSAGE = [
-  '📋 *Menú principal*',
-  '```',
-  '🔰 GENERAL',
-  '──────────────┼─────────────────',
-  '/info         │ Yape Fake',
-  '/servicios    │ Ver servicios',
-  '/apk          │ Descargar APK',
-  '',
-  '💰 PAGOS',
-  '──────────────┼─────────────────',
-  '/pagar        │ Instrucciones',
-  '/qr           │ Ver QR de pago',
-  '',
-  '🆘 AYUDA',
-  '──────────────┼─────────────────',
-  '/activacion   │ Ya pagué',
-  '/tutorial     │ Tutoriales',
-  '/estafas      │ Me estafaron',
-  '/soporte      │ Reportar errores',
-  '```',
-].join('\n');
-
-const TUTORIALES_MESSAGE = [
-  '🎓 *Tutoriales disponibles*',
-  '```',
-  '───────────────┼─────────────────',
-  '/escanear      │ Escanear QR',
-  '/autocompletar │ Autocompletado',
-  '```',
-].join('\n');
-
-const serviceRows = SERVICES.map((service) => `${service.id}️⃣ ${service.option}`);
-const INFO_MESSAGE = ['📋 *Servicios disponibles*', '', ...serviceRows, '', '✍️ Escribe un *número*'].join('\n');
-
-const YAPE_APP_MESSAGE = SERVICES[0].message.join('\n');
-
-function QR_MESSAGE(precio = 50) {
-  const monto = Number(precio).toFixed(2);
-
-  return [
-    '✏️ *Intrucciones de pago con QR*',
-    '',
-    'Sigue estos pasos para pagar:',
-    '',
-    '1️⃣ Abre tu *Yape* o banca móvil.',
-    '2️⃣ Selecciona *Escanear QR*.',
-    '3️⃣ Ve a la opción *Subir imagen*.',
-    `4️⃣ Realiza el pago de *S/ ${monto}*.`,
-    '5️⃣ Envía el *comprobante de pago* por este chat.',
-    '',
-    '⏳ Una vez verificado el pago, activaré la licencia con tu correo.',
-  ].join('\n');
-}
+const { TITLE_PRODUCT, PRICE_PRODUCT, FILE_APK, MAIN_MENU_MESSAGE, TUTORIALES_MESSAGE } = require('./data');
+const { MSG_HELP_1, MSG_HELP_2, MSG_HELP_3 } = require('./data');
+const YEAR = new Date().getFullYear();
 
 const COMMAND_TUTORIALS = {
   '/tutorial': {
@@ -191,33 +43,36 @@ const COMMAND_RESPONSES = {
   'buenos dias': {
     text: 'Hola, en que puedo ayudarte?',
   },
-  'hola ayuda con el yape fake!': {
+  [MSG_HELP_1]: {
     text: 'Hola, en que puedo ayudarte?',
   },
-  'hola, ayuda con el yape fake!': {
+  [MSG_HELP_2]: {
     text: 'Hola, en que puedo ayudarte?',
   },
-  'hola ayuda con la instalacion del yape fake!': {
+  [MSG_HELP_3]: {
     text: 'Hola, eres Android o Iphone?',
   },
   'hola informacion sobre el yape.': {
     image: 'yape.png',
-    text: YAPE_APP_MESSAGE,
+    text: YAPE_MESSAGE(),
+  },
+  '/info': {
+    image: 'yape.png',
+    text: YAPE_MESSAGE(),
   },
   '/menu': {
     text: MAIN_MENU_MESSAGE,
   },
-  '/info': {
-    image: 'yape.png',
-    text: YAPE_APP_MESSAGE,
-  },
-  '/servicios': {
-    text: INFO_MESSAGE,
-  },
-  '/pagar': () => ({
-    image: 'qr.png',
-    text: QR_MESSAGE(50),
-  }),
+  '/pagar': () => [
+    {
+      image: 'qr.png',
+      text: getPaymentYapeMessage(),
+    },
+    {
+      gif: 'videos/escanear_qr.mp4',
+      text: QR_MESSAGE(),
+    },
+  ],
   '/qr': {
     image: 'qr.png',
   },
@@ -233,7 +88,7 @@ const COMMAND_RESPONSES = {
       ].join('\n'),
     },
     {
-      file: 'files/Yape_Fake.apk',
+      file: FILE_APK,
       text: null,
     },
   ],
@@ -249,8 +104,46 @@ const COMMAND_RESPONSES = {
       ].join('\n'),
     },
     {
-      file: 'files/Yape_Fake.apk',
+      file: FILE_APK,
       text: null,
+    },
+  ],
+  '/android': () => [
+    {
+      text: [
+        '🤖 *Cómo instalar en Android*',
+        '',
+        '1️⃣ Abre el link desde *Chrome* o *Brave*.',
+        '2️⃣ Toca los *3 puntos* (⋮) en la esquina superior derecha.',
+        '3️⃣ Selecciona *"Agregar a pantalla de inicio"*',
+        '4️⃣ Confirma tocando *"Instalar"*.',
+        '',
+        '✅ Listo, ya tienes el ícono en tu celular.',
+        '',
+        '👇 Aquí tienes un tutorial:',
+      ].join('\n'),
+    },
+    {
+      gif: 'videos/android.mp4',
+    },
+  ],
+  '/iphone': () => [
+    {
+      text: [
+        '🍏 *Cómo instalar en iPhone*',
+        '',
+        '1️⃣ Abre el link desde *Safari*',
+        '2️⃣ Busca el ícono de *Compartir* 📤 (un cuadrado con una flecha hacia arriba).',
+        '3️⃣ Desliza y selecciona *"Agregar a inicio"*.',
+        '4️⃣ Toca *"Agregar"* (arriba a la derecha).',
+        '',
+        '✅ Listo, ya tienes el ícono en tu celular.',
+        '',
+        '👇 Aquí tienes un tutorial:',
+      ].join('\n'),
+    },
+    {
+      gif: 'videos/iphone.mp4',
     },
   ],
   '/activacion': {
@@ -305,6 +198,37 @@ const COMMAND_RESPONSES = {
   ...COMMAND_TUTORIALS,
 };
 
+function YAPE_MESSAGE() {
+  return [
+    `🚀 *${TITLE_PRODUCT} - ${YEAR}*`,
+    '',
+    'Activa tu licencia de forma segura aquí.',
+    `💰 *Precio:* S/ ${PRICE_PRODUCT}`,
+    '',
+    '✅ *Pago único*',
+    '✅ *Acceso permanente*',
+    '✅ *Actualizaciones automáticas*',
+    '',
+    'Si deseas adquirirlo, escribe: `/pagar`',
+  ].join('\n');
+}
+
+function QR_MESSAGE(precio = PRICE_PRODUCT) {
+  const monto = Number(precio).toFixed(2);
+
+  return [
+    '✏️ *Intrucciones de pago con QR*',
+    '',
+    '1️⃣ Toma captura o guarda el QR.',
+    '2️⃣ Busca la opción *Escanear QR*.',
+    '3️⃣ Selecciona *Subir imagen*.',
+    `4️⃣ Realiza el pago de *S/ ${monto}*.`,
+    '5️⃣ Envía el comprobante por este chat.',
+    '',
+    '⏳ Una vez verificado el pago, activaré la licencia con tu correo.',
+  ].join('\n');
+}
+
 function getCommandResponse(normalizedText) {
   const texto = String(normalizedText || '').trim();
   const response = COMMAND_RESPONSES[texto] ?? null;
@@ -320,6 +244,10 @@ function getPaymentInfoMessage(nombre, monto) {
   return ['💳 *Información de pago*', '', `👤 Usuario: *${nombre}*`, `💰 Monto a pagar: *S/${monto}*`].join('\n');
 }
 
+function getPaymentYapeMessage() {
+  return ['💳 Métodos de pago: *Yape/Plin*', `👤 Titular: *Lguss*`].join('\n');
+}
+
 function getRegisterCodeMessage(code) {
   return [
     '🔐 *Código de verificación*',
@@ -329,17 +257,16 @@ function getRegisterCodeMessage(code) {
   ].join('\n');
 }
 
-function getServiceResponseById(id) {
-  const value = String(id || '').trim();
-  if (!/^[1-5]$/.test(value)) return null;
+function getTokenMessage(days) {
+  return `🎉 *AUTOCOMPLETADO POR ${days} DÍA${days > 1 ? 'S' : ''}*
 
-  const service = SERVICES.find((item) => item.id === value);
-  if (!service) return null;
+Para empezar a usarlo:
 
-  return {
-    text: Array.isArray(service.message) ? service.message.join('\n') : '',
-    image: service.img || '',
-  };
+✅ 1. Copia el token.
+✅ 2. Ve a *Configuración*.
+✅ 3. Pégalo y pulsa *"Activar"*.
+
+🚀 *Este es tu token:* 👇👇👇`;
 }
 
 function SERVICE_MESSAGE(text, normalizedText) {
@@ -420,29 +347,13 @@ function normalizeText(text) {
     .trim();
 }
 
-function getCommandKey(normalizedText) {
-  const text = String(normalizedText || '').trim();
-
-  if (COMMAND_RESPONSES[text]) {
-    return text;
-  }
-
-  if (/^[1-5]$/.test(text)) {
-    return text;
-  }
-
-  return null;
-}
-
 module.exports = {
-  SERVICES,
   COMMAND_RESPONSES,
   QR_MESSAGE,
   SERVICE_MESSAGE,
   getCommandResponse,
-  getCommandKey,
-  getServiceResponseById,
   getPaymentInfoMessage,
   getRegisterCodeMessage,
+  getTokenMessage,
   normalizeText,
 };

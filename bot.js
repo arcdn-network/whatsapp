@@ -4,21 +4,20 @@ const path = require('path');
 const fs = require('fs');
 
 const { banUser, unbanUser, isBanned } = require('./services/banned');
-const { buscarPagoPorOperacion, buscarCodigoRegistroPorEmail } = require('./services/querys');
+const { buscarPagoPorOperacion, buscarCodigoRegistroPorEmail, crearTokenAutocompletado } = require('./services/querys');
 const {
   QR_MESSAGE,
   SERVICE_MESSAGE,
   getCommandResponse,
-  getCommandKey,
-  getServiceResponseById,
-  getPaymentInfoMessage,
   getRegisterCodeMessage,
+  getTokenMessage,
   normalizeText,
 } = require('./utils/constants');
 
 const resourcesPath = path.join(process.cwd(), 'resources');
 const PAYMENT_MESSAGE_REGEX = /Mi código de pago es:\s*\*?(\d+)\*?/i;
 const REGISTER_MESSAGE_REGEX = /hola,\s*no me llego el codigo de registro\.\s*mi correo es:\s*([^\s]+@[^\s]+)/i;
+const TOKEN_COMMAND_REGEX = /^\/token\s+(\d+)$/i;
 const duplicateMessages = new Map();
 const DUPLICATE_WINDOW_MS = 4000;
 
@@ -124,6 +123,7 @@ async function getSpecialQueryResponse(text) {
         text: getPaymentInfoMessage(nombre, monto),
       },
       {
+        gif: 'videos/escanear_qr.mp4',
         text: QR_MESSAGE(monto),
       },
     ];
@@ -153,16 +153,9 @@ async function getSpecialQueryResponse(text) {
 }
 
 async function getResponseConfig(text, normalizedText) {
-  const command = getCommandKey(normalizedText);
-
   const specialResponse = await getSpecialQueryResponse(text);
   if (specialResponse) {
     return specialResponse;
-  }
-
-  const serviceResponse = getServiceResponseById(command);
-  if (serviceResponse) {
-    return serviceResponse;
   }
 
   const serviceRequestResponse = SERVICE_MESSAGE(text, normalizedText);
@@ -191,21 +184,32 @@ function getTypingDelay(text) {
   return Math.min(base + length * perChar + jitter, 1500);
 }
 
-async function simulateTyping(client, chatId, text) {
+async function simulateTyping(chat, text) {
   try {
-    const chat = await client.getChatById(chatId);
     if (!chat) return;
 
     await chat.sendStateTyping();
     await sleep(getTypingDelay(text));
     await chat.clearState();
   } catch (error) {
-    console.error('[WHATSAPP] Error simulando escritura:', error);
+    console.error('[WHATSAPP] Error simulando escritura:', error.message);
   }
 }
 
 function resolveResourcePath(filePath) {
   return path.isAbsolute(filePath) ? filePath : path.join(resourcesPath, filePath);
+}
+
+const mediaCache = new Map();
+
+function getCachedMedia(filePath) {
+  if (mediaCache.has(filePath)) {
+    return mediaCache.get(filePath);
+  }
+
+  const media = MessageMedia.fromFilePath(filePath);
+  mediaCache.set(filePath, media);
+  return media;
 }
 
 async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOptions = {}) {
@@ -218,7 +222,7 @@ async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOp
   }
 
   try {
-    const media = MessageMedia.fromFilePath(filePath);
+    const media = getCachedMedia(filePath);
     await client.sendMessage(chatId, media, { ...options, ...extraOptions });
     return true;
   } catch (error) {
@@ -232,6 +236,13 @@ async function sendNormalizedResponse(client, originalMsg, response) {
   const chatId = getMessageChatId(originalMsg);
   const quotedMessageId = originalMsg.id?._serialized;
 
+  let chat = null;
+  try {
+    chat = await originalMsg.getChat();
+  } catch (error) {
+    console.error('[WHATSAPP] Error obteniendo chat:', error.message);
+  }
+
   for (const msg of messages) {
     const text = typeof msg.text === 'string' ? msg.text.trim() : '';
     const reply = msg.reply === true;
@@ -241,13 +252,14 @@ async function sendNormalizedResponse(client, originalMsg, response) {
       quotedMessageId: reply ? quotedMessageId : undefined,
     };
 
-    if (text) {
-      await simulateTyping(client, chatId, text);
+    if (text && chat) {
+      await simulateTyping(chat, text);
     }
 
     let mediaSent = false;
 
     const mediaList = [
+      { value: msg.gif, extra: { sendVideoAsGif: true } },
       { value: msg.image, extra: undefined },
       { value: msg.video, extra: undefined },
       { value: msg.file, extra: { sendMediaAsDocument: true } },
@@ -299,10 +311,28 @@ async function onNewMessage(msg) {
         unbanUser(senderId);
         return;
       }
+
+      const tokenMatch = normalizedText.match(TOKEN_COMMAND_REGEX);
+      if (tokenMatch) {
+        const days = parseInt(tokenMatch[1], 10);
+        const resp = await crearTokenAutocompletado(days);
+
+        if (!resp.ok) {
+          await clientInstance.sendMessage(senderId, resp.message);
+          return;
+        }
+
+        await sendMediaMessage(clientInstance, senderId, 'auto.png', {
+          caption: getTokenMessage(days),
+        });
+
+        await clientInstance.sendMessage(senderId, resp.data.token);
+        return;
+      }
     }
 
     // ── Bloquear baneados ──
-    if (isBanned(senderId)) return;
+    if (!msg.fromMe && isBanned(senderId)) return;
 
     // ── Flujo normal ──
     if (shouldBlockDuplicate(senderId, normalizedText)) return;
