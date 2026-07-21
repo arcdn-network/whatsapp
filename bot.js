@@ -18,7 +18,7 @@ const {
 const resourcesPath = path.join(process.cwd(), 'resources');
 const PAYMENT_MESSAGE_REGEX = /Mi código de pago es:\s*\*?(\d+)\*?/i;
 const REGISTER_MESSAGE_REGEX = /hola,\s*no me llego el codigo de registro\.\s*mi correo es:\s*([^\s]+@[^\s]+)/i;
-const TOKEN_COMMAND_REGEX = /^\/token\s+(\d+)$/i;
+const TOKEN_COMMAND_REGEX = /^\/token(?:\s+(\d+))?$/i;
 const duplicateMessages = new Map();
 const DUPLICATE_WINDOW_MS = 4000;
 
@@ -321,7 +321,7 @@ async function onNewMessage(msg) {
 
       const tokenMatch = normalizedText.match(TOKEN_COMMAND_REGEX);
       if (tokenMatch) {
-        const days = parseInt(tokenMatch[1], 10);
+        const days = tokenMatch[1] ? parseInt(tokenMatch[1], 10) : 7;
         const resp = await crearTokenAutocompletado(days);
 
         if (!resp.ok) {
