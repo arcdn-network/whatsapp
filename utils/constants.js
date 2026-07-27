@@ -79,23 +79,7 @@ const COMMAND_RESPONSES = {
   '/apk': [
     {
       text: [
-        '📦 Aquí tienes la aplicación.',
-        '',
-        'Instálala en tu dispositivo 📲',
-        'Luego crea tu cuenta ✍️ dentro de la app.',
-        '',
-        'Cuando termines, envíame el correo con el que te registraste para activar tu licencia ✅',
-      ].join('\n'),
-    },
-    {
-      file: FILE_APK,
-      text: null,
-    },
-  ],
-  '/app': [
-    {
-      text: [
-        '📦 Aquí tienes la aplicación.',
+        '📦 Aquí tienes la *NUEVO VERSIÓN*.',
         '',
         'Instálala en tu dispositivo 📲 ',
         '',
@@ -107,29 +91,16 @@ const COMMAND_RESPONSES = {
       file: FILE_APK,
       text: null,
     },
-  ],
-  '/android': () => [
     {
-      text: [
-        '🤖 *Cómo instalar en Android*',
-        '',
-        '1️⃣ Abre el link desde *Chrome* o *Brave*.',
-        '2️⃣ Toca los *3 puntos* (⋮) en la esquina superior derecha.',
-        '3️⃣ Selecciona *"Agregar a pantalla de inicio"*',
-        '4️⃣ Confirma tocando *"Instalar"*.',
-        '',
-        '✅ Listo, ya tienes el ícono en tu celular.',
-        '',
-        '👇 Aquí tienes un tutorial:',
-      ].join('\n'),
-    },
-    {
-      gif: 'videos/android.mp4',
+      text: 'Borre el anterior e instale el nuevo',
     },
   ],
   '/iphone': () => [
     {
       text: [
+        '*NUEVO LINK* 👇👇👇',
+        'https://ypfk-xpress.vercel.app/',
+        '',
         '🍏 *Cómo instalar en iPhone*',
         '',
         '1️⃣ Abre el link desde *Safari*',
