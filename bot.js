@@ -357,15 +357,12 @@ async function onNewMessage(msg) {
           return;
         }
 
-        await clientInstance.sendMessage(senderId, htmlToWhatsApp(resp.message));
-
         if (resp.base64) {
           const media = new MessageMedia('application/pdf', resp.base64, resp.filename);
-
-          await clientInstance.sendMessage(senderId, media, {
-            sendMediaAsDocument: true,
-          });
+          await clientInstance.sendMessage(senderId, media, { sendMediaAsDocument: true });
         }
+
+        await clientInstance.sendMessage(senderId, htmlToWhatsApp(resp.message));
 
         return;
       }
