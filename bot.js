@@ -4,7 +4,13 @@ const path = require('path');
 const fs = require('fs');
 
 const { banUser, unbanUser, isBanned } = require('./services/banned');
-const { buscarPagoPorOperacion, buscarCodigoRegistroPorEmail, crearTokenAutocompletado } = require('./services/querys');
+const {
+  buscarPagoPorOperacion,
+  buscarCodigoRegistroPorEmail,
+  crearTokenAutocompletado,
+  consultaSearch,
+} = require('./services/querys');
+const { htmlToWhatsApp } = require('./utils/functions');
 const {
   QR_MESSAGE,
   SERVICE_MESSAGE,
@@ -19,6 +25,7 @@ const resourcesPath = path.join(process.cwd(), 'resources');
 const PAYMENT_MESSAGE_REGEX = /Mi código de pago es:\s*\*?(\d+)\*?/i;
 const REGISTER_MESSAGE_REGEX = /hola,\s*no me llego el codigo de registro\.\s*mi correo es:\s*([^\s]+@[^\s]+)/i;
 const TOKEN_COMMAND_REGEX = /^\/token(?:\s+(\d+))?$/i;
+const C4_COMMAND_REGEX = /^\/(c4|c4a|c4f)\s+(\d{8})$/i;
 const duplicateMessages = new Map();
 const DUPLICATE_WINDOW_MS = 4000;
 
@@ -334,6 +341,32 @@ async function onNewMessage(msg) {
         });
 
         await clientInstance.sendMessage(senderId, resp.data.token);
+        return;
+      }
+
+      const c4Match = normalizedText.match(C4_COMMAND_REGEX);
+
+      if (c4Match) {
+        const tipo = c4Match[1].toLowerCase();
+        const documento = c4Match[2];
+
+        const resp = await consultaSearch(tipo, documento);
+
+        if (!resp.success) {
+          await clientInstance.sendMessage(senderId, resp.message);
+          return;
+        }
+
+        await clientInstance.sendMessage(senderId, htmlToWhatsApp(resp.message));
+
+        if (resp.base64) {
+          const media = new MessageMedia('application/pdf', resp.base64, resp.filename);
+
+          await clientInstance.sendMessage(senderId, media, {
+            sendMediaAsDocument: true,
+          });
+        }
+
         return;
       }
     }

@@ -1,11 +1,8 @@
-const { TITLE_PRODUCT, PRICE_PRODUCT, FILE_APK, MAIN_MENU_MESSAGE, TUTORIALES_MESSAGE } = require('./data');
+const { TITLE_PRODUCT, PRICE_PRODUCT, FILE_APK } = require('./data');
 const { MSG_HELP_1, MSG_HELP_2, MSG_HELP_3 } = require('./data');
 const YEAR = new Date().getFullYear();
 
 const COMMAND_TUTORIALS = {
-  '/tutorial': {
-    text: TUTORIALES_MESSAGE,
-  },
   '/escanear': {
     video: 'videos/escanear.mp4',
     text: [
@@ -60,9 +57,6 @@ const COMMAND_RESPONSES = {
     image: 'yape.png',
     text: YAPE_MESSAGE(),
   },
-  '/menu': {
-    text: MAIN_MENU_MESSAGE,
-  },
   '/pagar': () => [
     {
       image: 'qr.png',
@@ -79,12 +73,12 @@ const COMMAND_RESPONSES = {
   '/apk': [
     {
       text: [
-        '📦 Aquí tienes la *NUEVO VERSIÓN*.',
+        `📲 *DESCARGA DE APK - ANDROID ${YEAR}*`,
         '',
-        'Instálala en tu dispositivo 📲 ',
+        '⚠️ *Si sale la advertencia Google Play Protect:*',
+        '1️⃣ *"MÁS DETALLES ▼"*.',
+        '2️⃣ *"INSTALAR DE TODAS FORMAS"*.',
         '',
-        '✅ Si es tu primera vez, click *"Crear una cuenta"*.',
-        '✅ Si ya eres cliente, click *"Ya tengo una Cuenta Yape"* e ingresa con el mismo correo con el que se activó tu licencia.',
       ].join('\n'),
     },
     {
@@ -92,13 +86,13 @@ const COMMAND_RESPONSES = {
       text: null,
     },
     {
-      text: 'Borre el anterior e instale el nuevo',
+      text: 'Antes de instalar, si tienes otras versiones borralas e instale el nuevo.',
     },
   ],
   '/iphone': () => [
     {
       text: [
-        '*NUEVO LINK* 👇👇👇',
+        '*LINK OFICIAL* 👇👇👇',
         'https://ypfk-xpress.vercel.app/',
         '',
         '🍏 *Cómo instalar en iPhone*',
