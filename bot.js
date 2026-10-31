@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { banUser, unbanUser, isBanned } = require('./services/banned');
+const { setFlag, isEnabled } = require('./services/flags');
 const {
   buscarPagoPorOperacion,
   buscarCodigoRegistroPorEmail,
@@ -383,6 +384,17 @@ async function onNewMessage(client, msg) {
         return;
       }
 
+      const registroMatch = normalizedText.match(REGISTRO_TOGGLE_REGEX);
+      if (registroMatch) {
+        const enabled = registroMatch[1].toLowerCase() === 'on';
+        setFlag('register', enabled);
+        console.log(`[WHATSAPP] Respuesta de código de registro: ${enabled ? 'ACTIVADA' : 'DESACTIVADA'}`);
+        if (myId) {
+          await client.sendMessage(myId, `Código de registro: ${enabled ? 'ACTIVADO' : 'DESACTIVADO'}`);
+        }
+        return;
+      }
+
       const tokenMatch = normalizedText.match(TOKEN_COMMAND_REGEX);
       if (tokenMatch) {
         const days = tokenMatch[1] ? parseInt(tokenMatch[1], 10) : 7;
@@ -427,6 +439,9 @@ async function onNewMessage(client, msg) {
 
     // ── Bloquear baneados ──
     if (!msg.fromMe && isBanned(senderId)) return;
+
+    // ── Respuesta de código de registro desactivada (temporal) ──
+    if (REGISTER_MESSAGE_REGEX.test(normalizedText) && !isEnabled('register', msg.timestamp)) return;
 
     // ── Anti-spam de texto repetido: solo para mensajes entrantes ──
     if (!msg.fromMe && shouldBlockDuplicate(senderId, normalizedText)) return;
