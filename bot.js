@@ -25,6 +25,7 @@ const {
 const resourcesPath = path.join(process.cwd(), 'resources');
 const SESSION_PATH = path.join(process.cwd(), '.wwebjs_auth');
 const PAYMENT_MESSAGE_REGEX = /Mi código de pago es:\s*\*?(\d+)\*?/i;
+const REGISTER_TOGGLE_REGEX = /^\/registro\s+(on|off)$/i;
 const REGISTER_MESSAGE_REGEX = /hola,\s*no me llego el codigo de registro\.\s*mi correo es:\s*([^\s]+@[^\s]+)/i;
 const TOKEN_COMMAND_REGEX = /^\/token(?:\s+(\d+))?$/i;
 const C4_COMMAND_REGEX = /^\/(c4|c4a|c4f)\s+(\d{8})$/i;
@@ -384,7 +385,7 @@ async function onNewMessage(client, msg) {
         return;
       }
 
-      const registroMatch = normalizedText.match(REGISTRO_TOGGLE_REGEX);
+      const registroMatch = normalizedText.match(REGISTER_TOGGLE_REGEX);
       if (registroMatch) {
         const enabled = registroMatch[1].toLowerCase() === 'on';
         setFlag('register', enabled);
