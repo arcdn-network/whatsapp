@@ -1,171 +1,205 @@
 const { TITLE_PRODUCT, PRICE_PRODUCT, FILE_APK } = require('./data');
 const { MSG_HELP_1, MSG_HELP_2, MSG_HELP_3 } = require('./data');
-const YEAR = new Date().getFullYear();
+
+const getYear = () => new Date().getFullYear();
 
 const COMMAND_TUTORIALS = {
   '/escanear': {
-    video: 'videos/escanear.mp4',
-    text: [
-      '📷 *Función Escanear*',
-      '',
-      'Sube una imagen nítida y legible para que la app pueda extraer correctamente la información.',
-      '',
-      'Puedes usarla de tres formas:',
-      '',
-      '1️⃣ *Imagen de QR*',
-      'Sube una imagen del QR donde se visualice el texto (IMPORTANTE).',
-      '',
-      '2️⃣ *Voucher de Yape*',
-      'Sube una captura del comprobante.',
-      'La app identificará el nombre del titular y sus 3 últimos dígitos.',
-      '',
-      '3️⃣ Screenshot *(Solo iPhone)*',
-      'Al momento de buscar el titular de línea, toma un screenshot y súbelo.',
-      'La app se encargará de extraer la información.',
-    ].join('\n'),
+    access: 'both',
+    response: {
+      video: 'videos/escanear.mp4',
+      text: [
+        '📷 *Función Escanear*',
+        '',
+        'Sube una imagen nítida y legible para que la app pueda extraer correctamente la información.',
+        '',
+        'Puedes usarla de tres formas:',
+        '',
+        '1️⃣ *Imagen de QR*',
+        'Sube una imagen del QR donde se visualice el texto (IMPORTANTE).',
+        '',
+        '2️⃣ *Voucher de Yape*',
+        'Sube una captura del comprobante.',
+        'La app identificará el nombre del titular y sus 3 últimos dígitos.',
+        '',
+        '3️⃣ Screenshot *(Solo iPhone)*',
+        'Al momento de buscar el titular de línea, toma un screenshot y súbelo.',
+        'La app se encargará de extraer la información.',
+      ].join('\n'),
+    },
   },
   '/autocompletar': {
-    video: 'videos/autocompletar.mp4',
-    text: [
-      '⚡ *Autocompletado Manual*',
-      '',
-      '1️⃣ Ve a la sección *Mis contactos*',
-      '2️⃣ Guarda el nombre y número',
-      '3️⃣ Listo! Ya puedes yapear',
-    ].join('\n'),
+    access: 'both',
+    response: {
+      video: 'videos/autocompletar.mp4',
+      text: [
+        '⚡ *Autocompletado Manual*',
+        '',
+        '1️⃣ Ve a la sección *Mis contactos*',
+        '2️⃣ Guarda el nombre y número',
+        '3️⃣ Listo! Ya puedes yapear',
+      ].join('\n'),
+    },
   },
 };
 
+// (#9) Las respuestas que dependen del año o de valores dinámicos son funciones,
+// así se evalúan en cada consulta y no una sola vez al cargar el módulo
 const COMMAND_RESPONSES = {
   'buenos dias': {
-    text: 'Hola, en que puedo ayudarte?',
+    response: { text: 'Hola, en que puedo ayudarte?' },
   },
   [MSG_HELP_1]: {
-    text: 'Hola, en que puedo ayudarte?',
+    response: { text: 'Hola, en que puedo ayudarte?' },
   },
   [MSG_HELP_2]: {
-    text: 'Hola, en que puedo ayudarte?',
+    response: { text: 'Hola, en que puedo ayudarte?' },
   },
   [MSG_HELP_3]: {
-    text: 'Hola, eres Android o Iphone?',
+    response: { text: 'Hola, eres Android o Iphone?' },
   },
   'hola informacion sobre el yape.': {
-    image: 'yape.png',
-    text: YAPE_MESSAGE(),
+    response: () => ({ image: 'yape.png', text: YAPE_MESSAGE() }),
   },
   '/info': {
-    image: 'yape.png',
-    text: YAPE_MESSAGE(),
+    access: 'both',
+    response: () => ({ image: 'yape.png', text: YAPE_MESSAGE() }),
   },
-  '/pagar': () => [
-    {
-      image: 'qr.png',
-      text: getPaymentYapeMessage(),
-    },
-    {
-      gif: 'videos/escanear_qr.mp4',
-      text: QR_MESSAGE(),
-    },
-  ],
+  '/pagar': {
+    access: 'both',
+    response: () => [
+      {
+        image: 'qr.png',
+        text: getPaymentYapeMessage(),
+      },
+      {
+        gif: 'videos/escanear_qr.mp4',
+        text: QR_MESSAGE(),
+      },
+    ],
+  },
   '/qr': {
-    image: 'qr.png',
+    access: 'both',
+    response: { image: 'qr.png' },
   },
-  '/apk': [
-    {
-      text: [
-        `📲 *DESCARGA DE APK - ANDROID ${YEAR}*`,
-        '',
-        '⚠️ *Si sale la advertencia Google Play Protect:*',
-        '1️⃣ *"MÁS DETALLES ▼"*.',
-        '2️⃣ *"INSTALAR DE TODAS FORMAS"*.',
-        '',
-      ].join('\n'),
-    },
-    {
-      file: FILE_APK,
-      text: null,
-    },
-    {
-      text: 'Antes de instalar, si tienes otras versiones borralas e instale el nuevo.',
-    },
-  ],
-  '/iphone': () => [
-    {
-      text: [
-        '*LINK OFICIAL* 👇👇👇',
-        'https://ypfk-xpress.vercel.app/',
-        '',
-        '🍏 *Cómo instalar en iPhone*',
-        '',
-        '1️⃣ Abre el link desde *Safari*',
-        '2️⃣ Busca el ícono de *Compartir* 📤 (un cuadrado con una flecha hacia arriba).',
-        '3️⃣ Desliza y selecciona *"Agregar a inicio"*.',
-        '4️⃣ Toca *"Agregar"* (arriba a la derecha).',
-        '',
-        '✅ Listo, ya tienes el ícono en tu celular.',
-        '',
-        '👇 Aquí tienes un tutorial:',
-      ].join('\n'),
-    },
-    {
-      gif: 'videos/iphone.mp4',
-    },
-  ],
+  '/apk': {
+    access: 'admin',
+    response: () => [
+      {
+        text: [
+          `📲 *DESCARGA DE APK - ANDROID ${getYear()}*`,
+          '',
+          '⚠️ *Si sale la advertencia Google Play Protect:*',
+          '1️⃣ *"MÁS DETALLES ▼"*.',
+          '2️⃣ *"INSTALAR DE TODAS FORMAS"*.',
+          '',
+        ].join('\n'),
+      },
+      {
+        file: FILE_APK,
+        text: null,
+        // (#11) Se envía solo si el archivo falla, para no dejar al cliente sin respuesta
+        fallback: 'No pude enviar el archivo en este momento. Intenta de nuevo en unos minutos.',
+      },
+      {
+        text: 'Antes de instalar, si tienes otras versiones borralas e instale el nuevo.',
+      },
+    ],
+  },
+  '/iphone': {
+    access: 'admin',
+    response: () => [
+      {
+        text: [
+          '*LINK OFICIAL* 👇👇👇',
+          'https://ypfk-xpress.vercel.app/',
+          '',
+          '🍏 *Cómo instalar en iPhone*',
+          '',
+          '1️⃣ Abre el link desde *Safari*',
+          '2️⃣ Busca el ícono de *Compartir* 📤 (un cuadrado con una flecha hacia arriba).',
+          '3️⃣ Desliza y selecciona *"Agregar a inicio"*.',
+          '4️⃣ Toca *"Agregar"* (arriba a la derecha).',
+          '',
+          '✅ Listo, ya tienes el ícono en tu celular.',
+          '',
+          '👇 Aquí tienes un tutorial:',
+        ].join('\n'),
+      },
+      {
+        gif: 'videos/iphone.mp4',
+      },
+    ],
+  },
   '/activacion': {
-    text: [
-      '🔐 *Activación de licencia*',
-      '',
-      'Si realizaste el pago con *PagoEfectivo*, espera aproximadamente *1 minuto* para que el sistema registre el pago.',
-      '',
-      'Una vez confirmado el pago o activación, actualiza la aplicación de cualquiera de estas formas:',
-      '',
-      '1️⃣ *Cerrar sesión y volver a ingresar*',
-      '• Presiona el ícono de la *personita* en la parte superior.',
-      '• Busca la opción *Cerrar sesión*.',
-      '• Vuelve a iniciar sesión en la aplicación.',
-      '',
-      '2️⃣ *Reiniciar la aplicación*',
-      '• Cierra completamente la app.',
-      '• Ábrela nuevamente para que se reflejen los cambios.',
-      '',
-      '📌 *Si realizaste el pago a un distribuidor autorizado*',
-      '• Debes esperar a que el distribuidor responda y valide tu pago.',
-    ].join('\n'),
+    access: 'both',
+    response: {
+      text: [
+        '🔐 *Activación de licencia*',
+        '',
+        'Si realizaste el pago con *PagoEfectivo*, espera aproximadamente *1 minuto* para que el sistema registre el pago.',
+        '',
+        'Una vez confirmado el pago o activación, actualiza la aplicación de cualquiera de estas formas:',
+        '',
+        '1️⃣ *Cerrar sesión y volver a ingresar*',
+        '• Presiona el ícono de la *personita* en la parte superior.',
+        '• Busca la opción *Cerrar sesión*.',
+        '• Vuelve a iniciar sesión en la aplicación.',
+        '',
+        '2️⃣ *Reiniciar la aplicación*',
+        '• Cierra completamente la app.',
+        '• Ábrela nuevamente para que se reflejen los cambios.',
+        '',
+        '📌 *Si realizaste el pago a un distribuidor autorizado*',
+        '• Debes esperar a que el distribuidor responda y valide tu pago.',
+      ].join('\n'),
+    },
   },
   '/soporte': {
-    text: [
-      '⚙️ *Soporte y mejoras de la aplicación*',
-      '',
-      'Si detectaste un error, diferencia o deseas sugerir una mejora, envíame una *captura de pantalla* donde se vea claramente la observación.',
-      '',
-      'Para poder revisarlo incluye:',
-      '• Una breve explicación de lo que ocurre.',
-      '• Señala con un *lápiz* la parte donde está el problema.',
-      '• El modelo de tu teléfono (opcional).',
-      '',
-      'Con esa información podré revisarlo para corregir o mejorar la aplicación.',
-    ].join('\n'),
+    access: 'both',
+    response: {
+      text: [
+        '⚙️ *Soporte y mejoras de la aplicación*',
+        '',
+        'Si detectaste un error, diferencia o deseas sugerir una mejora, envíame una *captura de pantalla* donde se vea claramente la observación.',
+        '',
+        'Para poder revisarlo incluye:',
+        '• Una breve explicación de lo que ocurre.',
+        '• Señala con un *lápiz* la parte donde está el problema.',
+        '• El modelo de tu teléfono (opcional).',
+        '',
+        'Con esa información podré revisarlo para corregir o mejorar la aplicación.',
+      ].join('\n'),
+    },
   },
   '/estafas': {
-    text: [
-      '❗ *Aviso importante*',
-      '',
-      'No realizamos ventas por TikTok, Facebook ni otros números de WhatsApp. Solo atendemos por este número.',
-      '',
-      'Si realizaste un pago a una persona no autorizada o alguien utilizó mi producto para engañarte, lamentablemente no tengo control sobre esas acciones.',
-      '',
-      '⚠️ Recuerda que:',
-      '• Las advertencias se muestran al momento de registrarte.',
-      '• Mi número siempre aparece en la *marca de agua* del contenido.',
-      '• La aplicación es pública y puede descargarse gratis desde mi perfil.',
-    ].join('\n'),
+    access: 'both',
+    response: {
+      text: [
+        '❗ *Aviso importante*',
+        '',
+        'No realizamos ventas por TikTok, Facebook ni otros números de WhatsApp. Solo atendemos por este número.',
+        '',
+        'Si realizaste un pago a una persona no autorizada o alguien utilizó mi producto para engañarte, lamentablemente no tengo control sobre esas acciones.',
+        '',
+        '⚠️ Recuerda que:',
+        '• Las advertencias se muestran al momento de registrarte.',
+        '• Mi número siempre aparece en la *marca de agua* del contenido.',
+        '• La aplicación es pública y puede descargarse gratis desde mi perfil.',
+      ].join('\n'),
+    },
   },
   ...COMMAND_TUTORIALS,
 };
 
+// (#10) Las claves se normalizan con la misma función que se aplica al texto entrante,
+const NORMALIZED_COMMANDS = new Map(
+  Object.entries(COMMAND_RESPONSES).map(([key, value]) => [normalizeText(key), value]),
+);
+
 function YAPE_MESSAGE() {
   return [
-    `🚀 *${TITLE_PRODUCT} - ${YEAR}*`,
+    `🚀 *${TITLE_PRODUCT} ${getYear()}*`,
     '',
     'Activa tu licencia de forma segura aquí.',
     `💰 *Precio:* S/ ${PRICE_PRODUCT}`,
@@ -194,15 +228,26 @@ function QR_MESSAGE(precio = PRICE_PRODUCT) {
   ].join('\n');
 }
 
-function getCommandResponse(normalizedText) {
-  const texto = String(normalizedText || '').trim();
-  const response = COMMAND_RESPONSES[texto] ?? null;
+// Función centralizada y estandarizada que valida los flags de acceso
+function getCommandResponse(normalizedText, isFromMe) {
+  const texto = normalizeText(normalizedText);
+  const entry = NORMALIZED_COMMANDS.get(texto) ?? null;
 
-  if (typeof response === 'function') {
-    return response();
+  if (!entry) return null;
+
+  // Extraer configuración o asumir compatibilidad si es un objeto directo
+  const access = entry.access || 'both';
+  const rawResponse = entry.response ?? entry;
+
+  // Validaciones de flags (admin, client, both)
+  if (access === 'admin' && !isFromMe) return null;
+  if (access === 'client' && isFromMe) return null;
+
+  if (typeof rawResponse === 'function') {
+    return rawResponse();
   }
 
-  return response;
+  return rawResponse;
 }
 
 function getPaymentInfoMessage(nombre, monto) {

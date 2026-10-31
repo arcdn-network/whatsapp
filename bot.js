@@ -22,15 +22,24 @@ const {
 } = require('./utils/constants');
 
 const resourcesPath = path.join(process.cwd(), 'resources');
+const SESSION_PATH = path.join(process.cwd(), '.wwebjs_auth');
 const PAYMENT_MESSAGE_REGEX = /Mi código de pago es:\s*\*?(\d+)\*?/i;
 const REGISTER_MESSAGE_REGEX = /hola,\s*no me llego el codigo de registro\.\s*mi correo es:\s*([^\s]+@[^\s]+)/i;
 const TOKEN_COMMAND_REGEX = /^\/token(?:\s+(\d+))?$/i;
 const C4_COMMAND_REGEX = /^\/(c4|c4a|c4f)\s+(\d{8})$/i;
+
+// Anti-spam de texto repetido (solo mensajes entrantes)
 const duplicateMessages = new Map();
 const DUPLICATE_WINDOW_MS = 4000;
 
-let clientInstance = null;
-let clientInitializing = null;
+//Dedupe por ID de mensaje: 'message' y 'message_create' disparan el mismo mensaje
+const processedMessages = new Map();
+const PROCESSED_TTL_MS = 60000;
+
+// Estado del cliente
+let clientInstance = null; // cliente listo para usarse
+let clientInitializing = null; // promesa de inicialización en curso
+let currentClient = null; // último cliente creado (para ignorar eventos de clientes viejos)
 
 function getMessageChatId(msg) {
   if (!msg) return '';
@@ -41,6 +50,13 @@ function getQuotedMessageId(msg) {
   const id = msg?.id;
   if (!id) return undefined;
   return id._serialized || id['$1'] || `${id.fromMe}_${id.remote}_${id.id}`;
+}
+
+const MAX_MESSAGE_AGE_S = 60;
+function isStaleMessage(msg) {
+  const ts = Number(msg?.timestamp);
+  if (!ts) return false;
+  return Math.floor(Date.now() / 1000) - ts > MAX_MESSAGE_AGE_S;
 }
 
 function isSlashCommand(text) {
@@ -59,6 +75,20 @@ function shouldProcessMessage(msg) {
   }
 
   return true;
+}
+
+function isAlreadyProcessed(msg) {
+  const id = getQuotedMessageId(msg);
+  if (!id) return false;
+
+  const now = Date.now();
+
+  if (processedMessages.has(id)) {
+    return true;
+  }
+
+  processedMessages.set(id, now);
+  return false;
 }
 
 function shouldBlockDuplicate(senderId, normalizedText) {
@@ -85,6 +115,12 @@ function cleanupDuplicateMessages() {
   for (const [senderId, value] of duplicateMessages.entries()) {
     if (!value || now - value.at > DUPLICATE_WINDOW_MS * 3) {
       duplicateMessages.delete(senderId);
+    }
+  }
+
+  for (const [id, at] of processedMessages.entries()) {
+    if (now - at > PROCESSED_TTL_MS) {
+      processedMessages.delete(id);
     }
   }
 }
@@ -166,7 +202,7 @@ async function getSpecialQueryResponse(text) {
   return null;
 }
 
-async function getResponseConfig(text, normalizedText) {
+async function getResponseConfig(text, normalizedText, isFromMe) {
   const specialResponse = await getSpecialQueryResponse(text);
   if (specialResponse) {
     return specialResponse;
@@ -177,7 +213,8 @@ async function getResponseConfig(text, normalizedText) {
     return serviceRequestResponse;
   }
 
-  const directResponse = getCommandResponse(normalizedText);
+  // Se pasa isFromMe para evaluar el flag de seguridad
+  const directResponse = getCommandResponse(normalizedText, isFromMe);
   if (directResponse) {
     return directResponse;
   }
@@ -217,12 +254,15 @@ function resolveResourcePath(filePath) {
 const mediaCache = new Map();
 
 function getCachedMedia(filePath) {
-  if (mediaCache.has(filePath)) {
-    return mediaCache.get(filePath);
+  const stat = fs.statSync(filePath);
+  const cached = mediaCache.get(filePath);
+
+  if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+    return cached.media;
   }
 
   const media = MessageMedia.fromFilePath(filePath);
-  mediaCache.set(filePath, media);
+  mediaCache.set(filePath, { media, mtimeMs: stat.mtimeMs, size: stat.size });
   return media;
 }
 
@@ -232,6 +272,7 @@ async function sendMediaMessage(client, chatId, mediaPath, options = {}, extraOp
   const filePath = resolveResourcePath(mediaPath);
 
   if (!fs.existsSync(filePath)) {
+    console.error('[WHATSAPP] Archivo no encontrado:', filePath);
     return false;
   }
 
@@ -259,6 +300,7 @@ async function sendNormalizedResponse(client, originalMsg, response) {
 
   for (const msg of messages) {
     const text = typeof msg.text === 'string' ? msg.text.trim() : '';
+    const fallback = typeof msg.fallback === 'string' ? msg.fallback.trim() : '';
     const reply = msg.reply === true;
 
     const options = {
@@ -271,6 +313,7 @@ async function sendNormalizedResponse(client, originalMsg, response) {
     }
 
     let mediaSent = false;
+    let mediaRequested = false;
 
     const mediaList = [
       { value: msg.gif, extra: { sendVideoAsGif: true } },
@@ -283,6 +326,7 @@ async function sendNormalizedResponse(client, originalMsg, response) {
       const value = typeof media.value === 'string' ? media.value.trim() : '';
 
       if (value) {
+        mediaRequested = true;
         const sent = await sendMediaMessage(client, chatId, value, options, media.extra);
 
         if (sent) {
@@ -292,17 +336,31 @@ async function sendNormalizedResponse(client, originalMsg, response) {
       }
     }
 
-    if (!mediaSent && text) {
+    if (mediaSent) continue;
+
+    if (text) {
       await client.sendMessage(chatId, text, { quotedMessageId: options.quotedMessageId });
+      continue;
+    }
+
+    if (mediaRequested) {
+      console.error(`[WHATSAPP] No se pudo enviar el archivo solicitado en el chat ${chatId}`);
+      if (fallback) {
+        await client.sendMessage(chatId, fallback, { quotedMessageId: options.quotedMessageId });
+      }
     }
   }
 }
 
-async function onNewMessage(msg) {
+async function onNewMessage(client, msg) {
   try {
-    if (!clientInstance) return;
+    if (!client) return;
+    if (clientInstance && client !== clientInstance) return;
     if (!shouldProcessMessage(msg)) return;
+    if (isStaleMessage(msg)) return;
     if (!msg.body) return;
+
+    if (isAlreadyProcessed(msg)) return;
 
     cleanupDuplicateMessages();
 
@@ -311,9 +369,8 @@ async function onNewMessage(msg) {
 
     const normalizedText = normalizeText(msg.body);
 
-    // ── Comandos admin ──
     if (msg.fromMe) {
-      const myId = clientInstance.info?.wid?._serialized;
+      const myId = client.info?.wid?._serialized;
 
       if (normalizedText === '/off') {
         if (senderId === myId) return;
@@ -332,15 +389,15 @@ async function onNewMessage(msg) {
         const resp = await crearTokenAutocompletado(days);
 
         if (!resp.ok) {
-          await clientInstance.sendMessage(senderId, resp.message);
+          await client.sendMessage(senderId, resp.message);
           return;
         }
 
-        await sendMediaMessage(clientInstance, senderId, 'auto.png', {
+        await sendMediaMessage(client, senderId, 'auto.png', {
           caption: getTokenMessage(days),
         });
 
-        await clientInstance.sendMessage(senderId, resp.data.token);
+        await client.sendMessage(senderId, resp.data.token);
         return;
       }
 
@@ -353,16 +410,16 @@ async function onNewMessage(msg) {
         const resp = await consultaSearch(tipo, documento);
 
         if (!resp.success) {
-          await clientInstance.sendMessage(senderId, resp.message);
+          await client.sendMessage(senderId, resp.message);
           return;
         }
 
         if (resp.base64) {
           const media = new MessageMedia('application/pdf', resp.base64, resp.filename);
-          await clientInstance.sendMessage(senderId, media, { sendMediaAsDocument: true });
+          await client.sendMessage(senderId, media, { sendMediaAsDocument: true });
         }
 
-        await clientInstance.sendMessage(senderId, htmlToWhatsApp(resp.message));
+        await client.sendMessage(senderId, htmlToWhatsApp(resp.message));
 
         return;
       }
@@ -371,13 +428,13 @@ async function onNewMessage(msg) {
     // ── Bloquear baneados ──
     if (!msg.fromMe && isBanned(senderId)) return;
 
-    // ── Flujo normal ──
-    if (shouldBlockDuplicate(senderId, normalizedText)) return;
+    // ── Anti-spam de texto repetido: solo para mensajes entrantes ──
+    if (!msg.fromMe && shouldBlockDuplicate(senderId, normalizedText)) return;
 
-    const response = await getResponseConfig(msg.body, normalizedText);
+    const response = await getResponseConfig(msg.body, normalizedText, msg.fromMe);
     if (!response) return;
 
-    await sendNormalizedResponse(clientInstance, msg, response);
+    await sendNormalizedResponse(client, msg, response);
   } catch (error) {
     console.error('[WHATSAPP] Error en handler:', error);
   }
@@ -387,19 +444,19 @@ async function onNewMessage(msg) {
 const MAX_RETRIES = 5;
 const RETRY_DELAY_MS = 8000;
 let retryCount = 0;
+let reconnectTimer = null;
 
 function createWhatsAppClient() {
-  const sessionPath = '.wwebjs_auth';
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
-  if (!fs.existsSync(sessionPath)) {
-    fs.mkdirSync(sessionPath, { recursive: true });
+  if (!fs.existsSync(SESSION_PATH)) {
+    fs.mkdirSync(SESSION_PATH, { recursive: true });
   }
 
   return new Client({
     authStrategy: new LocalAuth({
       clientId: 'main',
-      dataPath: sessionPath,
+      dataPath: SESSION_PATH,
     }),
     puppeteer: {
       headless: true,
@@ -411,71 +468,108 @@ function createWhatsAppClient() {
   });
 }
 
+async function safeDestroy(client) {
+  if (!client) return;
+
+  try {
+    await client.destroy();
+  } catch (_) {}
+}
+
+function resetState(client) {
+  if (currentClient !== client) return;
+
+  currentClient = null;
+  clientInstance = null;
+  clientInitializing = null;
+}
+
 async function startWhatsAppBot() {
   if (clientInstance) return clientInstance;
   if (clientInitializing) return clientInitializing;
 
   clientInitializing = (async () => {
     const client = createWhatsAppClient();
+    currentClient = client;
 
-    client.on('qr', (qr) => {
-      console.log('[WHATSAPP] Escanea este QR:');
-      qrcode.generate(qr, { small: true });
-    });
+    try {
+      client.on('qr', (qr) => {
+        console.log('[WHATSAPP] Escanea este QR:');
+        qrcode.generate(qr, { small: true });
+      });
 
-    client.on('change_state', (state) => {
-      console.log('[WHATSAPP] change_state:', state);
-    });
+      client.on('change_state', (state) => {
+        console.log('[WHATSAPP] change_state:', state);
+      });
 
-    client.on('authenticated', () => {
-      retryCount = 0;
-      console.log('[WHATSAPP] Sesión autenticada');
-    });
+      client.on('authenticated', () => {
+        retryCount = 0;
+        console.log('[WHATSAPP] Sesión autenticada');
+      });
 
-    client.on('ready', () => {
-      retryCount = 0;
-      const wid = client.info?.wid?._serialized || 'sin_wid';
-      console.log(`[WHATSAPP] Conectado como: ${wid}`);
-    });
+      client.on('ready', () => {
+        retryCount = 0;
 
-    client.on('auth_failure', async (msg) => {
-      console.error('[WHATSAPP] Falló la autenticación:', msg);
+        if (currentClient === client) {
+          clientInstance = client;
+        }
 
-      try {
-        await client.destroy();
-      } catch (_) {}
+        const wid = client.info?.wid?._serialized || 'sin_wid';
+        console.log(`[WHATSAPP] Conectado como: ${wid}`);
+      });
 
-      const sessionPath = path.join(process.cwd(), '.wwebjs_auth');
-      if (fs.existsSync(sessionPath)) {
-        fs.rmSync(sessionPath, { recursive: true, force: true });
-        console.warn('[WHATSAPP] Sesión eliminada, reiniciando...');
+      client.on('auth_failure', async (msg) => {
+        console.error('[WHATSAPP] Falló la autenticación:', msg);
+
+        if (currentClient !== client) {
+          await safeDestroy(client);
+          return;
+        }
+
+        resetState(client);
+        await safeDestroy(client);
+
+        if (fs.existsSync(SESSION_PATH)) {
+          fs.rmSync(SESSION_PATH, { recursive: true, force: true });
+          console.warn('[WHATSAPP] Sesión eliminada, reiniciando...');
+        }
+
+        scheduleReconnect();
+      });
+
+      client.on('disconnected', async (reason) => {
+        console.warn('[WHATSAPP] Cliente desconectado:', reason);
+
+        if (currentClient !== client) {
+          await safeDestroy(client);
+          return;
+        }
+
+        resetState(client);
+        await safeDestroy(client);
+
+        if (reason === 'CONFLICT' || reason === 'UNLAUNCHED') {
+          console.error('[WHATSAPP] Conflicto de sesión detectado, saliendo...');
+          process.exit(1);
+          return;
+        }
+
+        scheduleReconnect();
+      });
+
+      client.on('message', (msg) => onNewMessage(client, msg));
+      client.on('message_create', (msg) => onNewMessage(client, msg));
+
+      await client.initialize();
+
+      if (currentClient !== client) {
+        throw new Error('Cliente descartado durante la inicialización');
       }
-
-      scheduleReconnect();
-    });
-
-    client.on('disconnected', async (reason) => {
-      console.warn('[WHATSAPP] Cliente desconectado:', reason);
-      clientInstance = null;
-      clientInitializing = null;
-
-      try {
-        await client.destroy();
-      } catch (_) {}
-
-      if (reason === 'CONFLICT' || reason === 'UNLAUNCHED') {
-        console.error('[WHATSAPP] Conflicto de sesión detectado, saliendo...');
-        process.exit(1);
-        return;
-      }
-
-      scheduleReconnect();
-    });
-
-    client.on('message', onNewMessage);
-    client.on('message_create', onNewMessage);
-
-    await client.initialize();
+    } catch (error) {
+      resetState(client);
+      await safeDestroy(client);
+      throw error;
+    }
 
     clientInstance = client;
     clientInitializing = null;
@@ -486,13 +580,14 @@ async function startWhatsAppBot() {
   try {
     return await clientInitializing;
   } catch (error) {
-    clientInitializing = null;
     scheduleReconnect();
     throw error;
   }
 }
 
 function scheduleReconnect() {
+  if (reconnectTimer) return;
+
   if (retryCount >= MAX_RETRIES) {
     console.error(`[WHATSAPP] Máximo de reintentos (${MAX_RETRIES}) alcanzado. Saliendo.`);
     process.exit(1);
@@ -503,7 +598,9 @@ function scheduleReconnect() {
   const delay = RETRY_DELAY_MS * retryCount;
   console.log(`[WHATSAPP] Reconectando en ${delay / 1000}s... (intento ${retryCount}/${MAX_RETRIES})`);
 
-  setTimeout(async () => {
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+
     try {
       await startWhatsAppBot();
     } catch (error) {
